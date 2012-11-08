@@ -6,6 +6,7 @@
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
+from .utf8csv import UnicodeWriter
 import argparse
 import csv
 import datetime
@@ -26,9 +27,10 @@ class Database(object):
         self.engine = create_engine(db_uri, echo=verbose)
         self.Base = declarative_base()
         self.Base.metadata.bind = self.engine
-        self.Base.metadata.reflect(self.engine)
+        self.Base.metadata.reflect(self.engine, views=True)
 
-    def archive(self):
+    def archive(self, includes=None, excludes=None, chunk_size=None):
+
         if self.as_zip:
             dst = tempfile.mkdtemp()
 
@@ -37,19 +39,17 @@ class Database(object):
 
         files =[]
         for name, table in self.Base.metadata.tables.items():
-            dst_file = os.path.join(dst, name) + '.csv'
-            files.append(dst_file)
-            with open(dst_file, 'wb') as csvfile:
-                writer = csv.writer(csvfile)
-                writer.writerow([col.name for col in table.columns])
-                for row in self.engine.execute(table.select()):
-                    writer.writerow(row)
+            if name in excludes or (includes and name not in includes):
+                continue
+
+            dst_file = os.path.join(dst, name) + '.{}.csv'
+            files.extend(self.write_table_to_csv(table, dst_file, chunk_size))
 
         if self.as_zip:
             uri = urlparse.urlparse(self.db_uri).path.split('?')[0]
             now = datetime.datetime.now()
             format = '%Y-%m-%d_%H:%M:%S.%f'
-            file_name = 'database_{}_archived_{}'.format(os.path.basename(uri),
+            file_name = '{}_{}'.format(os.path.basename(uri),
                                                          now.strftime(format))
             dst_file = os.path.join(self.dst_dir, file_name + '.zip')
             with zipfile.ZipFile(dst_file, 'w') as myzip:
@@ -58,6 +58,25 @@ class Database(object):
 
             shutil.rmtree(dst)
 
+    def write_table_to_csv(self, table, dst_file, chunk_size=None):
+
+        cols = [col.name for col in table.columns]
+        values = [row for row in self.engine.execute(table.select())]
+        files = []
+        if not chunk_size:
+            chunks = [values]
+        else:
+            chunks = zip(*[iter(values)]*chunk_size)
+
+        for i, chunk in enumerate(chunks):
+            file_ = dst_file.format(i)
+            files.append(file_)
+            with open(file_, 'wb') as csvfile:
+                writer = UnicodeWriter(csvfile, quoting=csv.QUOTE_ALL)
+                writer.writerow(cols)
+                writer.writerows(values)
+
+        return files
 
 
 class Parser(object):
@@ -72,6 +91,22 @@ class Parser(object):
                             metavar='DESTINATION_DIR',
                             default='.',
                             help='The destination path of archived files.')
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument('--include',
+                           dest='includes',
+                           default=[],
+                           nargs='*',
+                           help='The list of tables that must be included, other tables will be skipped.')
+        group.add_argument('--exclude',
+                           dest='excludes',
+                           nargs='*',
+                           default=[],
+                           help='The list of tables that must be excluded from being archived.')
+        parser.add_argument('--chunk-size',
+                            dest='chunk_size',
+                            type=int,
+                            default=0,
+                            help='Split exported rows into multiple files of $CHUNK_SIZE lines.')
         parser.add_argument('-z',
                             dest='zip',
                             default=False,
@@ -99,3 +134,15 @@ class Parser(object):
     @property
     def verbose(self):
         return self.args.verbose
+
+    @property
+    def includes(self):
+        return self.args.includes
+
+    @property
+    def excludes(self):
+        return self.args.excludes
+
+    @property
+    def chunk_size(self):
+        return self.args.chunk_size

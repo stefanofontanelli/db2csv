@@ -10,5 +10,10 @@ if __name__ == '__main__':
     from db2csv import Database, Parser
 
     parser = Parser()
-    db = Database(parser.db_uri, parser.dst_dir, parser.zip, parser.verbose)
-    db.archive()
+    db = Database(parser.db_uri,
+                  parser.dst_dir,
+                  parser.zip,
+                  parser.verbose)
+    db.archive(parser.includes,
+               parser.excludes,
+               parser.chunk_size)

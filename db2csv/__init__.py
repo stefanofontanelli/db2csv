@@ -10,6 +10,7 @@ from .utf8csv import UnicodeWriter
 import argparse
 import csv
 import datetime
+import os
 import os.path
 import shutil
 import tempfile
@@ -30,6 +31,9 @@ class Database(object):
         self.Base.metadata.reflect(self.engine, views=True)
 
     def archive(self, includes=None, excludes=None, chunk_size=None):
+
+        if not os.path.exists(self.dst_dir):
+            os.makedirs(self.dst_dir)
 
         if self.as_zip:
             dst = tempfile.mkdtemp()

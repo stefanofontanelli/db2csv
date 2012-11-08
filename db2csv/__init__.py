@@ -68,9 +68,11 @@ class Database(object):
         rows = [row for row in self.engine.execute(table.select())]
         files = []
         if not chunk_size:
-            chunks_size = len(rows)
+            chunks = [rows]
+        else:
+            chunks = self.chunk_values(rows, chunk_size)
 
-        for i, chunk in enumerate(self.chunk_values(rows, chunk_size)):
+        for i, chunk in enumerate(chunks):
             file_ = dst_file.format(i)
             files.append(file_)
             with open(file_, 'wb') as csvfile:
@@ -111,7 +113,7 @@ class Parser(object):
         parser.add_argument('--chunk-size',
                             dest='chunk_size',
                             type=int,
-                            default=1,
+                            default=0,
                             help='Split exported rows into multiple files of $CHUNK_SIZE lines.')
         parser.add_argument('-z',
                             dest='zip',

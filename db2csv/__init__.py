@@ -37,10 +37,11 @@ class Database(object):
 
         files =[]
         for name, table in self.Base.metadata.tables.items():
-            dst_file = os.path.join(dst, name)
+            dst_file = os.path.join(dst, name) + '.csv'
             files.append(dst_file)
             with open(dst_file, 'wb') as csvfile:
                 writer = csv.writer(csvfile)
+                writer.writerow([col.name for col in table.columns])
                 for row in self.engine.execute(table.select()):
                     writer.writerow(row)
 
@@ -53,7 +54,7 @@ class Database(object):
             dst_file = os.path.join(self.dst_dir, file_name + '.zip')
             with zipfile.ZipFile(dst_file, 'w') as myzip:
                 for file_ in files:
-                    myzip.write(file_)
+                    myzip.write(file_, arcname=os.path.basename(file_))
 
             shutil.rmtree(dst)
 
@@ -66,14 +67,14 @@ class Parser(object):
         parser.add_argument('db_uri',
                             metavar='DATABASE_URI',
                             help='The SQLAlchemy database URI: http://docs.sqlalchemy.org/en/rel_0_7/core/engines.html?highlight=engine#database-urls')
-        parser.add_argument('--dst',
+        parser.add_argument('-d',
                             dest='dst_dir',
                             metavar='DESTINATION_DIR',
                             default='.',
                             help='The destination path of archived files.')
         parser.add_argument('-z',
                             dest='zip',
-                            default=True,
+                            default=False,
                             action='store_true',
                             help='Archive files as zip.')
         parser.add_argument('-v',

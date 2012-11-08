@@ -11,7 +11,7 @@ requires = [
     ]
 
 setup(name='DB2CSV',
-      version='0.1a2',
+      version='0.1b1',
       description='Tool to dump all database tables into csv files.',
       long_description=README + '\n\n' +  CHANGES,
       classifiers=[

@@ -65,22 +65,24 @@ class Database(object):
     def write_table_to_csv(self, table, dst_file, chunk_size=None):
 
         cols = [col.name for col in table.columns]
-        values = [row for row in self.engine.execute(table.select())]
+        rows = [row for row in self.engine.execute(table.select())]
         files = []
         if not chunk_size:
-            chunks = [values]
-        else:
-            chunks = zip(*[iter(values)]*chunk_size)
+            chunks_size = len(rows)
 
-        for i, chunk in enumerate(chunks):
+        for i, chunk in enumerate(self.chunk_values(rows, chunk_size)):
             file_ = dst_file.format(i)
             files.append(file_)
             with open(file_, 'wb') as csvfile:
                 writer = UnicodeWriter(csvfile, quoting=csv.QUOTE_ALL)
                 writer.writerow(cols)
-                writer.writerows(values)
+                writer.writerows(chunk)
 
         return files
+
+    def chunk_values(self, values, size):
+        for i in xrange(0, len(values), size):
+            yield values[i:i+size]
 
 
 class Parser(object):

@@ -111,7 +111,7 @@ class Parser(object):
         parser.add_argument('--chunk-size',
                             dest='chunk_size',
                             type=int,
-                            default=0,
+                            default=1,
                             help='Split exported rows into multiple files of $CHUNK_SIZE lines.')
         parser.add_argument('-z',
                             dest='zip',

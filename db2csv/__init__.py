@@ -9,6 +9,7 @@ from sqlalchemy.ext.declarative import declarative_base
 import argparse
 import csv
 import datetime
+import os.path
 import shutil
 import tempfile
 import urlparse
@@ -24,8 +25,8 @@ class Database(object):
         self.verbose = verbose
         self.engine = create_engine(db_uri, echo=verbose)
         self.Base = declarative_base()
-        self.Base.metadata.bind = engine
-        self.Base.metadata.reflect(engine)
+        self.Base.metadata.bind = self.engine
+        self.Base.metadata.reflect(self.engine)
 
     def archive(self):
         if self.as_zip:
@@ -34,20 +35,22 @@ class Database(object):
         else:
             dst = self.dst_dir
 
+        files =[]
         for name, table in self.Base.metadata.tables.items():
             dst_file = os.path.join(dst, name)
+            files.append(dst_file)
             with open(dst_file, 'wb') as csvfile:
                 writer = csv.writer(csvfile)
-                for row in engine.execute(table.select()):
+                for row in self.engine.execute(table.select()):
                     writer.writerow(row)
 
         if self.as_zip:
-            uri = urlparse.urlparse(self.db_uri)
+            uri = urlparse.urlparse(self.db_uri).path.split('?')[0]
             now = datetime.datetime.now()
             format = '%Y-%m-%d_%H:%M:%S.%f'
-            file_name = 'database_{}_archived_{}'.format(uri.path,
+            file_name = 'database_{}_archived_{}'.format(os.path.basename(uri),
                                                          now.strftime(format))
-            dst_file = os.path.join(self.dst_dir, file_name)
+            dst_file = os.path.join(self.dst_dir, file_name + '.zip')
             with zipfile.ZipFile(dst_file, 'w') as myzip:
                 for file_ in files:
                     myzip.write(file_)
@@ -60,29 +63,23 @@ class Parser(object):
 
     def __init__(self):
         parser = argparse.ArgumentParser(description='Export database tables as CSV files and archive them.')
-        parser.add_argument('db', '--db',
-                            dest='db_uri',
-                            metavar='DATABASE URI',
-                            required=True,
+        parser.add_argument('db_uri',
+                            metavar='DATABASE_URI',
                             help='The SQLAlchemy database URI: http://docs.sqlalchemy.org/en/rel_0_7/core/engines.html?highlight=engine#database-urls')
         parser.add_argument('--dst',
                             dest='dst_dir',
-                            metavar='DESTINATION DIR',
-                            required=False,
+                            metavar='DESTINATION_DIR',
                             default='.',
                             help='The destination path of archived files.')
-        parser.add_argument('--zip',
+        parser.add_argument('-z',
                             dest='zip',
-                            metavar='ARCHIVE AS ZIP',
-                            required=False,
                             default=True,
+                            action='store_true',
                             help='Archive files as zip.')
-        parser.add_argument('--verbose',
+        parser.add_argument('-v',
                             dest='verbose',
-                            metavar='VERBOSE',
-                            required=False,
-                            default=False,
-                            help='Enable displaying of SQLAlchemy logs.')
+                            action='store_true',
+                            help='Verbose mode.')
         self.parser = parser
         self.args = parser.parse_args()
 

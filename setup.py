@@ -11,7 +11,7 @@ requires = [
     ]
 
 setup(name='DB2CSV',
-      version='0.1a1',
+      version='0.1a2',
       description='Tool to dump all database tables into csv files.',
       long_description=README + '\n\n' +  CHANGES,
       classifiers=[
@@ -29,6 +29,6 @@ setup(name='DB2CSV',
       tests_require=requires,
       test_suite="tests",
       entry_points = "",
-      scripts=['scripts/archive_database']
+      scripts=['scripts/db2csv_archive']
       )
 

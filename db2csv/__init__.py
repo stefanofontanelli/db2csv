@@ -91,14 +91,16 @@ class Parser(object):
 
     def __init__(self):
         parser = argparse.ArgumentParser(description='Export database tables as CSV files and archive them.')
-        parser.add_argument('db_uri',
+        parser.add_argument('--uri',
+                            dest='db_uri',
                             metavar='DATABASE_URI',
+                            required=True,
                             help='The SQLAlchemy database URI: http://docs.sqlalchemy.org/en/rel_0_7/core/engines.html?highlight=engine#database-urls')
         parser.add_argument('-d',
                             dest='dst_dir',
                             metavar='DESTINATION_DIR',
                             default='.',
-                            help='The destination path of archived files.')
+                            help='The destination path of archived files. (Default: .)')
         group = parser.add_mutually_exclusive_group()
         group.add_argument('--include',
                            dest='includes',

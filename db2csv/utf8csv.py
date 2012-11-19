@@ -48,8 +48,17 @@ class UnicodeWriter:
         self.stream = f
         self.encoder = codecs.getincrementalencoder(encoding)()
 
-    def writerow(self, row):
-        self.writer.writerow([unicode(s).encode("utf-8") for s in row])
+    def writerow(self, row, src_encoding='utf-8'):
+        t = []
+        for s in row:
+            if s is None:
+                t.append("")
+            elif isinstance(s, str):
+                t.append(unicode(s, src_encoding).encode('utf-8'))
+            else:
+                t.append(unicode(s).encode('utf-8'))
+        self.writer.writerow(t)
+
         # Fetch UTF-8 output from the queue ...
         data = self.queue.getvalue()
         data = data.decode("utf-8")
@@ -60,6 +69,6 @@ class UnicodeWriter:
         # empty queue
         self.queue.truncate(0)
 
-    def writerows(self, rows):
+    def writerows(self, rows, src_encoding='utf-8'):
         for row in rows:
-            self.writerow(row)
+            self.writerow(row, src_encoding)

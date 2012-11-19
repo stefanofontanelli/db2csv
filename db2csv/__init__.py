@@ -20,11 +20,13 @@ import zipfile
 
 class Database(object):
 
-    def __init__(self, db_uri, dst_dir, as_zip=True, verbose=False):
+    def __init__(self, db_uri, dst_dir, as_zip=True, verbose=False,
+                 src_encoding='utf-8'):
         self.db_uri = db_uri
         self.dst_dir = dst_dir
         self.as_zip = as_zip
         self.verbose = verbose
+        self.src_encoding = src_encoding
         self.engine = create_engine(db_uri, echo=verbose)
         self.Base = declarative_base()
         self.Base.metadata.bind = self.engine
@@ -41,7 +43,7 @@ class Database(object):
         else:
             dst = self.dst_dir
 
-        files =[]
+        files = []
         for name, table in self.Base.metadata.tables.items():
             if name in excludes or (includes and name not in includes):
                 continue
@@ -65,8 +67,11 @@ class Database(object):
     def write_table_to_csv(self, table, dst_file, chunk_size=None):
 
         cols = [col.name for col in table.columns]
-        rows = [row for row in self.engine.execute(table.select())]
+        q = "SELECT * from {0}".format(table.name)
+        rows = [row for row in self.engine.execute(q)]
+
         files = []
+
         if not chunk_size:
             chunks = [rows]
         else:
@@ -84,7 +89,7 @@ class Database(object):
 
     def chunk_values(self, values, size):
         for i in xrange(0, len(values), size):
-            yield values[i:i+size]
+            yield values[i:i + size]
 
 
 class Parser(object):
@@ -126,6 +131,11 @@ class Parser(object):
                             dest='verbose',
                             action='store_true',
                             help='Verbose mode.')
+        parser.add_argument('-e',
+                            metavar='ENCODING',
+                            default='utf-8',
+                            dest='src_encoding',
+                            help='Source Encoding (default: utf-8)')
         self.parser = parser
         self.args = parser.parse_args()
 

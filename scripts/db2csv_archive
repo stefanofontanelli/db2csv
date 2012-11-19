@@ -13,7 +13,8 @@ if __name__ == '__main__':
     db = Database(parser.db_uri,
                   parser.dst_dir,
                   parser.zip,
-                  parser.verbose)
+                  parser.verbose,
+                  parser.src_encoding)
     db.archive(parser.includes,
                parser.excludes,
                parser.chunk_size)
